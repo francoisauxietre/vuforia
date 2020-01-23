@@ -1,15 +1,52 @@
-﻿using System.Collections;
-using System.Collections.Generic;
+﻿/*==============================================================================
+Copyright (c) 2019 PTC Inc. All Rights Reserved.
+
+Copyright (c) 2010-2014 Qualcomm Connected Experiences, Inc.
+All Rights Reserved.
+Confidential and Proprietary - Protected under copyright and other laws.
+==============================================================================*/
+
 using UnityEngine;
 using Vuforia;
 
-public class trackableEvent : MonoBehaviour, ITrackableEventHandler
+/// <summary>
+/// A custom handler that implements the ITrackableEventHandler interface.
+///
+/// Changes made to this file could be overwritten when upgrading the Vuforia version.
+/// When implementing custom event handler behavior, consider inheriting from this class instead.
+/// </summary>
+public class TrackableEvent : MonoBehaviour, ITrackableEventHandler
 {
-    private VuMarkManager mVuMarkManager;
-    protected TrackableBehaviour mTrackableBehaviour;
-    private TrackableBehaviour.Status m_PreviousStatus;
-    private TrackableBehaviour.Status m_NewStatus;
+    #region PROTECTED_MEMBER_VARIABLES
 
+    protected TrackableBehaviour mTrackableBehaviour;
+    protected TrackableBehaviour.Status m_PreviousStatus;
+    protected TrackableBehaviour.Status m_NewStatus;
+    private VuMarkManager mVuMarkManager;
+
+    #endregion // PROTECTED_MEMBER_VARIABLES
+
+    #region UNITY_MONOBEHAVIOUR_METHODS
+
+    protected virtual void Start()
+    {
+        mTrackableBehaviour = GetComponent<TrackableBehaviour>();
+        if (mTrackableBehaviour)
+            mTrackableBehaviour.RegisterTrackableEventHandler(this);
+
+        mVuMarkManager = TrackerManager.Instance.GetStateManager().GetVuMarkManager();
+
+    }
+
+    protected virtual void OnDestroy()
+    {
+        if (mTrackableBehaviour)
+            mTrackableBehaviour.UnregisterTrackableEventHandler(this);
+    }
+
+    #endregion // UNITY_MONOBEHAVIOUR_METHODS
+
+    #region PUBLIC_METHODS
 
     /// <summary>
     ///     Implementation of the ITrackableEventHandler function called when the
@@ -22,15 +59,14 @@ public class trackableEvent : MonoBehaviour, ITrackableEventHandler
         m_PreviousStatus = previousStatus;
         m_NewStatus = newStatus;
 
-        Debug.Log("Trackable " + mTrackableBehaviour.TrackableName +
+        /*Debug.Log("Trackable " + mTrackableBehaviour.TrackableName +
                   " " + mTrackableBehaviour.CurrentStatus +
-                  " -- " + mTrackableBehaviour.CurrentStatusInfo);
+                  " -- " + mTrackableBehaviour.CurrentStatusInfo);*/
 
         if (newStatus == TrackableBehaviour.Status.DETECTED ||
             newStatus == TrackableBehaviour.Status.TRACKED ||
             newStatus == TrackableBehaviour.Status.EXTENDED_TRACKED)
         {
-            Debug.Log("coucou "+mTrackableBehaviour.name);
             OnTrackingFound();
         }
         else if (previousStatus == TrackableBehaviour.Status.TRACKED &&
@@ -46,6 +82,10 @@ public class trackableEvent : MonoBehaviour, ITrackableEventHandler
             OnTrackingLost();
         }
     }
+
+    #endregion // PUBLIC_METHODS
+
+    #region PROTECTED_METHODS
 
     protected virtual void OnTrackingFound()
     {
@@ -66,6 +106,23 @@ public class trackableEvent : MonoBehaviour, ITrackableEventHandler
             // Enable canvas':
             foreach (var component in canvasComponents)
                 component.enabled = true;
+
+            mVuMarkManager = TrackerManager.Instance.GetStateManager().GetVuMarkManager();
+
+            if (mVuMarkManager.GetActiveBehaviours() != null)
+            {
+                foreach (var bhvr in mVuMarkManager.GetActiveBehaviours())
+                {
+                    if (bhvr.gameObject.Equals(this.gameObject))
+                    {
+                        TextMesh t = this.gameObject.GetComponentInChildren<TextMesh>();
+
+                        t.text = bhvr.VuMarkTarget.InstanceId.StringValue;
+
+                    }
+                }
+            }
+
         }
     }
 
@@ -91,28 +148,6 @@ public class trackableEvent : MonoBehaviour, ITrackableEventHandler
                 component.enabled = false;
         }
     }
-    // Start is called before the first frame update
-    void Start()
-    {
-        mTrackableBehaviour = GetComponent<TrackableBehaviour>();
 
-        mVuMarkManager = TrackerManager.Instance.GetStateManager().GetVuMarkManager();
-
-    }
-
-    // Update is called once per frame
-    void Update()
-    {
-        foreach (var bhvr in mVuMarkManager.GetActiveBehaviours())
-        {
-            if (bhvr.gameObject.Equals(this.gameObject))
-            {
-                TextMesh t = this.gameObject.GetComponentInChildren<TextMesh>();
-                
-                t.text = bhvr.VuMarkTarget.InstanceId.StringValue;
-
-            }
-        }
-        
-    }
+    #endregion // PROTECTED_METHODS
 }
